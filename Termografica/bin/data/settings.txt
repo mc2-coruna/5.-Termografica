@@ -1,0 +1,5 @@
+visibleImageCenterX  : 720; 
+visibleImageCenterY  : 450; 
+visibleImageSize (%) : 100; 
+thermoImageCenterY   : 450; 
+thermoImageTime      : 10; 
