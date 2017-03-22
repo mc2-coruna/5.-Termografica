@@ -4,7 +4,7 @@ boolean buttonPrev = true;
 
 void setup() {
   Keyboard.begin();
-  pinMode(buttonPIN, INPUT, HIGH);
+  pinMode(buttonPIN, INPUT);
   digitalWrite(buttonPIN, HIGH);
   
   pinMode(pinLED,  OUTPUT);
