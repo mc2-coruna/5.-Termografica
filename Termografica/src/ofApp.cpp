@@ -3,6 +3,7 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
     
+    ofHideCursor();
     ofFile settingsFile;
     string frase;
     string settingsData[10], settingsNumber, parameter[10];
@@ -70,6 +71,7 @@ void ofApp::setup(){
     thermoImageHeight = thermoImageWidth * thermoImageAspect;
     thermoImageCenterY = (int) ofGetHeight()/2;
     if (thermoImage.setup(0)) {
+        //thermoImage.start(bmdModeNTSC);
         thermoImage.start(bmdModePAL);
         thermoImageInit = true;
         printf("BlackMagic device loged for thermo image\n");
@@ -130,14 +132,30 @@ void ofApp::setup(){
         
     }
     else writeToSettingsFile();
+    
+    
+
+    // Pista de sonido con la locuci—n que se repite
+    elLoro1.load("locucion.mp3");
+    elLoro1.setLoop(true);
+
+    // Pista de sonido con los pitidos
+    elLoro2.load("pitidos.mp3");
+    elLoro2.setLoop(false);
+    elLoro2.setVolume(0.4);
+    
+    
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
     
-    if (thermoImageOffTime > ofGetElapsedTimeMillis()) showThermo=true;
-    else showThermo=false;
     
+    // Actualiza el sonido de la locuci—n
+    updateSound(false);
+    
+ //   if (thermoImageOffTime > ofGetElapsedTimeMillis()) showThermo=true;
+ //   else showThermo=false;
     
     if (visibleImageInit) {  // call this once per update
         visibleImage.update();
@@ -160,29 +178,30 @@ void ofApp::update(){
     if (frames %10000 == 0)
     {
         if (visibleImageInit){
+            // Shows the Thermographic Image
+            alpha = 0;
             
+            // Closes the visible image grabber
             visibleImageInit = false;
             visibleImage.close();
             
+            // reopen the visible image grabber
             visibleImage.setDeviceID(imagenVisibleID);
             visibleImage.initGrabber(1280,960);
-            
             visibleImageInit = true;
-            
         }
         frames++;
     }
-    
-    
     
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
     
-    //char texto[256];
+    ofBackground(0,0,0);
     
     // Update the crossfade variable
+/*
     if (showThermo){
         alpha -=10;
         if (alpha <= 0) alpha = 0;}
@@ -190,20 +209,35 @@ void ofApp::draw(){
         alpha +=10;
         if (alpha >= 255) alpha = 255;}
     
-    
+  */
     // draws the Thermo Image
-    ofSetColor(ofColor (255));
-    ofClear(0);
-    if (thermoImageInit)
-        thermoImage.draw(0, thermoImagePositionY, thermoImageWidth, thermoImageHeight);
     
-    // draws the visible Image
-    ofSetColor(ofColor (255,alpha));
-    if (visibleImageInit){
-        visibleImage.draw(visibleImagePositionX, visibleImagePositionY, visibleImageWidth, visibleImageHeight);
+    
+    ofPushMatrix();
+    {
+        
+        ofTranslate (1980/2,0);
+        ofRotateY (180);
+        ofTranslate (-1980/2,0);
+
+        ofRotateX(-6);    // Corrects the perspective due to de cam
+                             // position
+
+        ofSetColor(ofColor (255));
+        ofClear(0);
+        
+        if (thermoImageInit)
+            thermoImage.draw(0, thermoImagePositionY,
+                             thermoImageWidth, thermoImageHeight);
+    
+        // draws the visible Image
+        ofSetColor(ofColor (255,alpha));
+        if (visibleImageInit)
+            visibleImage.draw(visibleImagePositionX, visibleImagePositionY,
+                              visibleImageWidth, visibleImageHeight);
+
     }
-    
-    
+    ofPopMatrix();
     
     // draws the settings menu
     ofSetColor (255);
@@ -233,7 +267,7 @@ void ofApp::draw(){
     char texto[256];
     //string texto;
     sprintf(texto,"numero de frames: %li;  numero de imagenes: %li;  diferencia: %5li", frames, isNewFrame, isNewFrameDiffAnt-framesDiffAnt);
-    mono12.drawString(texto,500,50);
+    // mono12.drawString(texto,500,50);
     
 }
 
@@ -241,9 +275,13 @@ void ofApp::draw(){
 void ofApp::keyPressed(int key){
     
     // Image control a: showTermo; s: showVisible
-    if (key == 'a')
+    if ((key == 'a') or (key == 'A') or (key == '6'))
+    {
         thermoImageOffTime = ofGetElapsedTimeMillis()+thermoImageTime*1000;
-    
+       
+        // Indica que se ha pulado el bot—n
+        updateSound(true);
+    }
     
     
     
@@ -503,6 +541,75 @@ void ofApp::managePreviousSettings(int function){
         thermoImageTime    = thermoImageTime_prev;
         
         updateParameters();
+    }
+}
+
+//--------------------------------------------------------------
+void ofApp::updateSound(bool buttonPusshed){
+    
+    // estadoSonido = 0 se reproduce la locuci—n larga
+    // estadoSonido = 1 suenan los pitidos
+    // estadoSonido = 2 tiempo de visi—n termogr‡fica
+    
+    // tiempoAtenua1  = primera reducci—n sonido (seg)
+    // volumenAtenua1 = primer volumen atenuado
+    // tiempoAtenua2  = segundo reducci—n sonido (seg)
+    // volumenAtenua2 = segundo volumen atenuado
+    
+    static int estadoSonido = 0; // sonido en estado de reposo
+    static long tiempoFinal = 0;
+
+    
+    if (estadoSonido==0)
+    {
+        if (!elLoro1.isPlaying())
+        {
+            elLoro1.setVolume(1.0);
+            elLoro1.play();
+        }
+        alpha = 255;
+
+        // Gesti—n de la pulsaci—n del boton
+        if (buttonPusshed)
+        {
+            estadoSonido = 1;
+            elLoro1.stop();
+            elLoro2.play();
+        }
+
+        if ((ofGetElapsedTimeMillis() - tiempoFinal) >
+                        tiempoAtenua2 *1000)
+            elLoro1.setVolume(volumenAtenua2);
+        
+        else if ((ofGetElapsedTimeMillis() - tiempoFinal) >
+                       tiempoAtenua1 *1000)
+            elLoro1.setVolume(volumenAtenua1);
+        
+    }
+    
+    if (estadoSonido==1)
+    {
+        if (! elLoro2.isPlaying())
+            {
+                estadoSonido = 2;
+                tiempoFinal = ofGetElapsedTimeMillis() + thermoImageTime*1000;
+                alpha = 0;
+            }
+    }
+
+    if (estadoSonido==2)
+    {
+        if (ofGetElapsedTimeMillis() > tiempoFinal)
+        {
+            alpha +=10;
+            if (alpha >255)
+            {
+                estadoSonido = 0;
+                alpha = 255;
+                elLoro1.setVolume(1.0);
+                elLoro1.play();
+            }
+        }
     }
 }
 

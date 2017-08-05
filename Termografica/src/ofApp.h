@@ -27,6 +27,9 @@ public:
     void writeToSettingsFile();
     void managePreviousSettings(int function);
     
+    void updateSound(bool buttonPusshed);
+
+    
     
     // Visible camera
     ofVideoGrabber visibleImage;
@@ -77,5 +80,12 @@ public:
     char parameterText1[100];
     char parameterText2[100];
     
+    ofSoundPlayer elLoro1, elLoro2;
+    unsigned long segundosActual;
+    
+    int   tiempoAtenua1  =   60; // primera reducci—n sonido (seg)
+    float volumenAtenua1 = 0.50; // primer volumen atenuado
+    int   tiempoAtenua2  =  120; // segundo reducci—n sonido (seg)
+    float volumenAtenua2 = 0.20; // segundo volumen atenuado
     
 };
